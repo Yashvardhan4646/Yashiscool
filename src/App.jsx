@@ -15,61 +15,47 @@ function App() {
 
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash || "#/home";
-      
-      // Extract page name: e.g. #/about -> about
-      const page = hash.replace("#/", "");
-      
+      // Normalize hash reading to handle both "#/about" and "#about" safely
+      const rawHash = window.location.hash;
+      const page = rawHash.replace(/^#\/?/, "");
+
       const validPages = ["home", "about", "projects", "certificates", "contact"];
+
       if (validPages.includes(page)) {
         setCurrentTab(page);
       } else {
-        // Fallback to home
         setCurrentTab("home");
-        window.location.hash = "#/home";
+        window.location.hash = "/home";
       }
 
-      // Scroll to top on page navigation
       window.scrollTo(0, 0);
     };
 
     window.addEventListener("hashchange", handleHashChange);
-    handleHashChange(); // Run on initial load
+    handleHashChange(); // Handles the initial page load/refresh safely
 
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
   const renderActivePage = () => {
     switch (currentTab) {
-      case "home":
-        return <Home />;
-      case "about":
-        return <About />;
-      case "projects":
-        return <Projects />;
-      case "certificates":
-        return <Certificates />;
-      case "contact":
-        return <Contact />;
-      default:
-        return <Home />;
+      case "home": return <Home />;
+      case "about": return <About />;
+      case "projects": return <Projects />;
+      case "certificates": return <Certificates />;
+      case "contact": return <Contact />;
+      default: return <Home />;
     }
   };
 
   return (
     <>
-      {/* Dynamic particles interactive background */}
       <CanvasBg />
-
-      {/* ── PIXEL GAME EFFECT OVERLAYS ── */}
-      {/* CRT scanlines: thin horizontal stripes over everything */}
       <div className="pixel-scanlines" aria-hidden="true" />
-      {/* Vignette: soft dark edges for that CRT monitor feel */}
       <div className="pixel-vignette" aria-hidden="true" />
 
-      {/* Main site shell layout */}
       <div className="app-container">
-        <Navbar />
+        <Navbar currentTab={currentTab} />
         <main className="main-content">
           {renderActivePage()}
         </main>
