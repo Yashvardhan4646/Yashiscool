@@ -26,6 +26,7 @@ export default function Contact() {
   // Animation states
   const [isStamping, setIsStamping] = useState(false);
   const [postcardState, setPostcardState] = useState("idle"); // idle | stamping | flying | gone
+  const [animationStage, setAnimationStage] = useState("idle"); // "idle" | "packing" | "closing" | "stamping" | "flying" | "completed"
 
   const postcardRef = useRef(null);
 
@@ -54,71 +55,130 @@ export default function Contact() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const playStampSound = (type) => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === "stamp") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(140, ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(30, ctx.currentTime + 0.25);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      } else if (type === "whoosh") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.5);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.5);
+      } else if (type === "success") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08);
+        osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.16);
+        osc.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.24);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.5);
+      }
+    } catch (e) {
+      // Ignore autoplay block
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) { setStatus("error"); return; }
 
-    // ── Phase 1: Stamp slam animation ───────────────────────────────────────
-    setPostcardState("stamping");
-    setIsStamping(true);
-    await new Promise(r => setTimeout(r, 900)); // wait for slam to finish
-    setIsStamping(false);
-
-    // ── Phase 2: Terminal logs + EmailJS send ───────────────────────────────
+    // Start background EmailJS transmission immediately to save time
     setStatus("sending");
     setLogs([]);
+    setAnimationStage("packing");
 
-    await addLog("Initializing secure buffer transfer sequence...", 250);
-    await addLog("Resolving route gateway to Yashvardhan's portal...", 300);
-    await addLog(`Packing payload: [Name: ${form.name.slice(0, 16)}] [Priority: ${priority.toUpperCase()}]`, 350);
-    await addLog("Converting text stream to compressed binary arrays...", 400);
-    await addLog("Initiating SSL handshake with smtp.yashvardhan.dev...", 350);
+    const emailPromise = (async () => {
+      await addLog("Initializing secure buffer transfer sequence...", 200);
+      await addLog("Resolving route gateway to Yashvardhan's portal...", 250);
+      await addLog(`Packing payload: [Name: ${form.name.slice(0, 16)}] [Priority: ${priority.toUpperCase()}]`, 250);
+      await addLog("Converting text stream to compressed binary arrays...", 200);
+      await addLog("Initiating SSL handshake with smtp.yashvardhan.dev...", 200);
 
-    if (IS_DEMO_MODE) {
-      await addLog("[WARN] EmailJS credentials not configured — running in DEMO MODE", 200);
-    }
-
-    await addLog(`Transmitting packet data (${form.message.length * 2} bytes)...`, 400);
-
-    // ── EmailJS send ─────────────────────────────────────────────────────────
-    if (!IS_DEMO_MODE) {
-      try {
-        await emailjs.send(
-          EMAILJS_SERVICE_ID,
-          EMAILJS_TEMPLATE_ID,
-          {
-            user_name:  form.name,
-            user_email: form.email,
-            subject:    form.subject || `[${priority.toUpperCase()}] Message from ${form.name}`,
-            message:    form.message,
-            reply_to:   form.email,
-          },
-          EMAILJS_PUBLIC_KEY
-        );
-      } catch (err) {
-        await addLog(`[ERROR] Transmission failed: ${err?.text || "Network error"}`, 300);
-        setStatus("error-send");
-        setPostcardState("idle");
-        return;
+      if (IS_DEMO_MODE) {
+        await addLog("[WARN] EmailJS credentials not configured — running in DEMO MODE", 100);
       }
+
+      await addLog(`Transmitting packet data (${form.message.length * 2} bytes)...`, 250);
+
+      if (!IS_DEMO_MODE) {
+        try {
+          await emailjs.send(
+            EMAILJS_SERVICE_ID,
+            EMAILJS_TEMPLATE_ID,
+            {
+              user_name:  form.name,
+              user_email: form.email,
+              subject:    form.subject || `[${priority.toUpperCase()}] Message from ${form.name}`,
+              message:    form.message,
+              reply_to:   form.email,
+            },
+            EMAILJS_PUBLIC_KEY
+          );
+        } catch (err) {
+          await addLog(`[ERROR] Transmission failed: ${err?.text || "Network error"}`, 200);
+          throw err;
+        }
+      }
+
+      await addLog("Waiting for remote node acknowledgement...", 250);
+      await addLog("Transmission successful! Status: 250 OK (Queued for Delivery)", 250);
+    })();
+
+    // Animation timeline control
+    // Stage 1: Packing (card slides into envelope)
+    await new Promise(r => setTimeout(r, 1500));
+
+    // Stage 2: Closing (flap folds down)
+    setAnimationStage("closing");
+    await new Promise(r => setTimeout(r, 900));
+
+    // Stage 3: Stamping (stamp slams down, screen shakes)
+    setAnimationStage("stamping");
+    playStampSound("stamp");
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Stage 4: Flying (envelope flies away)
+    setAnimationStage("flying");
+    playStampSound("whoosh");
+    await new Promise(r => setTimeout(r, 1300));
+
+    // Wait for the EmailJS request to complete
+    try {
+      await emailPromise;
+      playStampSound("success");
+      setStatus("success");
+    } catch (err) {
+      setStatus("error-send");
     }
 
-    await addLog("Waiting for remote node acknowledgement...", 450);
-    await addLog("Transmission successful! Status: 250 OK (Queued for Delivery)", 500);
-
-    // ── Phase 3: Postcard flight animation ──────────────────────────────────
-    setPostcardState("flying");
-    await new Promise(r => setTimeout(r, 900)); // let postcard fly away
-    setPostcardState("gone");
-
-    setStatus("success");
+    setAnimationStage("completed");
   };
 
   const handleReset = () => {
     setStatus("idle");
     setForm({ name: "", email: "", subject: "", message: "" });
     setLogs([]);
-    setPostcardState("idle");
+    setAnimationStage("idle");
   };
 
   // Postcard class builder
@@ -479,6 +539,75 @@ export default function Contact() {
           )}
         </div>
       </div>
+
+      {/* ── Postmail Dispatch Animation Modal ───────────────────────── */}
+      {animationStage !== "idle" && animationStage !== "completed" && (
+        <div className="postmail-modal-backdrop">
+          <div className="postmail-modal-content">
+            
+            <div className="postmail-status-ticker">
+              {animationStage === "packing" && "🔒 PACKING SECURE PAYLOAD..."}
+              {animationStage === "closing" && "📬 SEALING PACKET..."}
+              {animationStage === "stamping" && "✍️ STAMPING CREDENTIALS..."}
+              {animationStage === "flying" && "🚀 DISPATCHING BUFFER..."}
+            </div>
+
+            <div className={`envelope-wrapper ${animationStage === "stamping" ? "shake-effect" : ""} ${animationStage === "flying" ? "flight-effect" : ""}`}>
+              
+              {/* Envelope Back/Inside pocket */}
+              <div className="envelope-pocket"></div>
+
+              {/* Message card that slides inside */}
+              <div className={`envelope-message-card ${animationStage !== "packing" ? "packed" : ""}`}>
+                <div className="card-header-label">MESSAGE PAYLOAD // TX</div>
+                <div className="card-meta-line"><strong>FROM:</strong> {form.name}</div>
+                <div className="card-meta-line"><strong>EMAIL:</strong> {form.email}</div>
+                {form.subject && <div className="card-meta-line"><strong>SUBJ:</strong> {form.subject}</div>}
+                <div className="card-payload-text">{form.message}</div>
+              </div>
+
+              {/* Front flaps overlay */}
+              <div className="envelope-front">
+                <svg viewBox="0 0 340 220" className="envelope-front-svg">
+                  {/* Bottom flap */}
+                  <path d="M 0,220 L 170,110 L 340,220 Z" fill="#f5e6c4" stroke="#0f172a" strokeWidth="2.5" />
+                  {/* Left flap */}
+                  <path d="M 0,0 L 170,110 L 0,220 Z" fill="#faeed1" stroke="#0f172a" strokeWidth="2" />
+                  {/* Right flap */}
+                  <path d="M 340,0 L 170,110 L 340,220 Z" fill="#faeed1" stroke="#0f172a" strokeWidth="2" />
+                </svg>
+              </div>
+
+              {/* Top fold-down flap */}
+              <div className={`envelope-flap ${animationStage !== "packing" ? "closed" : ""}`}>
+                <svg viewBox="0 0 340 110" className="envelope-flap-svg">
+                  <polygon points="0,0 170,110 340,0" fill="#f5e6c4" stroke="#0f172a" strokeWidth="2.5" />
+                </svg>
+              </div>
+
+              {/* Postage Stamp spot */}
+              <div className="envelope-stamp-spot">
+                <span>✉</span>
+              </div>
+
+              {/* Stamped postmark overlay */}
+              <div className={`envelope-postmark-mark ${animationStage === "stamping" || animationStage === "flying" ? "stamped" : ""}`}>
+                <svg viewBox="0 0 100 100" className="stamp-mark-svg">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(225,29,72,0.75)" strokeWidth="1.5" strokeDasharray="3 2" />
+                  <circle cx="50" cy="50" r="35" fill="none" stroke="rgba(225,29,72,0.5)" strokeWidth="1" />
+                  <path d="M5 42 Q 25 35, 50 42 T 95 42" fill="none" stroke="rgba(225,29,72,0.75)" strokeWidth="1.2" />
+                  <path d="M5 50 Q 25 43, 50 50 T 95 50" fill="none" stroke="rgba(225,29,72,0.75)" strokeWidth="1.2" />
+                  <path d="M5 58 Q 25 51, 50 58 T 95 58" fill="none" stroke="rgba(225,29,72,0.75)" strokeWidth="1.2" />
+                  <text x="50" y="27" fill="rgba(225,29,72,0.8)" fontSize="8" fontFamily="monospace" textAnchor="middle" fontWeight="bold" letterSpacing="1">DELHI</text>
+                  <text x="50" y="80" fill="rgba(225,29,72,0.8)" fontSize="7" fontFamily="monospace" textAnchor="middle" fontWeight="bold" letterSpacing="1">IST ZONE</text>
+                </svg>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
