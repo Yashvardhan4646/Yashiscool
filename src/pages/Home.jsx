@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
 import { ArrowRight, Award, Compass, Layers, Star, User, Folder, Mail, Terminal, FileCode } from "lucide-react";
 import { portfolioData } from "../data/portfolioData";
 
@@ -30,15 +29,8 @@ export default function Home() {
   // CRT Scanline Filter Toggle State
   const [crtActive, setCrtActive] = useState(false);
 
-  // Active floating system windows state
-  const [openWindows, setOpenWindows] = useState({
-    avatar: false,
-    synth: false,
-    notes: false,
-    trash: false,
-  });
-  const [activeWindowId, setActiveWindowId] = useState(null);
-  const [trashEmpty, setTrashEmpty] = useState(false);
+  // Active floating system modals: null, "avatar", "synth"
+  const [activeModal, setActiveModal] = useState(null);
 
   // Audio Synth State
   const [synthOscActive, setSynthOscActive] = useState(false);
@@ -107,31 +99,6 @@ export default function Home() {
     }
   };
 
-  const playRetroSound = (theme) => {
-    if (theme === "click") {
-      playClickSound(800, 0.05, "sine");
-    } else if (theme === "open") {
-      playClickSound(600, 0.06, "triangle");
-      setTimeout(() => playClickSound(900, 0.08, "sine"), 60);
-    } else if (theme === "close") {
-      playClickSound(700, 0.06, "sine");
-      setTimeout(() => playClickSound(400, 0.08, "sawtooth"), 60);
-    } else if (theme === "type") {
-      playClickSound(650, 0.02, "sine");
-    } else if (theme === "success") {
-      playClickSound(523.25, 0.08, "sine");
-      setTimeout(() => playClickSound(659.25, 0.08, "sine"), 80);
-      setTimeout(() => playClickSound(783.99, 0.15, "sine"), 160);
-    } else if (theme === "error") {
-      playClickSound(180, 0.2, "sawtooth");
-    } else if (theme === "explode") {
-      playClickSound(100, 0.4, "sawtooth");
-    } else if (theme === "relay") {
-      playClickSound(300, 0.08, "square");
-      setTimeout(() => playClickSound(150, 0.08, "square"), 80);
-    }
-  };
-
   // Interactive Terminal State
   const [terminalInput, setTerminalInput] = useState("");
   const [terminalLines, setTerminalLines] = useState([
@@ -179,14 +146,15 @@ export default function Home() {
           "Type 'game' to play again, or 'clear' to reset terminal."
         ];
         setGameStage("idle");
-        playRetroSound("success");
+        // Play success riser
+        setTimeout(() => playClickSound(523.25, 0.4, "triangle"), 100);
       } else if (normalizedCmd === "code 2025") {
         outputLines = [
           "KEYPAD: [2025] ACCESS DENIED.",
           "ERROR: Invalid credentials. Keypad locked for 1 second.",
           "Try again: Type 'code 2026'"
         ];
-        playRetroSound("error");
+        setTimeout(() => playClickSound(180, 0.2, "sawtooth"), 100);
       } else if (normalizedCmd === "go left") {
         outputLines = [
           "You walked into a pit of recursive syntax errors!",
@@ -194,7 +162,7 @@ export default function Home() {
           "Type 'game' to restart adventure, or 'clear' to reset terminal."
         ];
         setGameStage("idle");
-        playRetroSound("error");
+        setTimeout(() => playClickSound(120, 0.4, "sawtooth"), 100);
       } else {
         outputLines = [
           `Invalid action '${cmd}' during RetroQuest.`,
@@ -233,7 +201,7 @@ export default function Home() {
           "SYSTEM OVERRIDE DETECTED... INJECTING FLOW VECTOR...",
           "MATRIX RECONSTRUCTION COMPLETED SUCCESSFULLY."
         ];
-        playRetroSound("success");
+        setTimeout(() => playClickSound(880, 0.3, "sine"), 100);
       } else if (normalizedCmd === "ls") {
         outputLines = [
           "Directory: /var/yashvardhan/root",
@@ -320,16 +288,13 @@ export default function Home() {
       outputLines.forEach((line, idx) => {
         setTimeout(() => {
           setTerminalLines(prev => [...prev, { text: line, type: "stdout" }]);
-          playRetroSound("type");
         }, (idx + 1) * 120);
       });
-    }
-  };
+    };
 
-  const handleTerminalSubmit = (e) => {
+    const handleTerminalSubmit = (e) => {
       e.preventDefault();
       if (!terminalInput.trim()) return;
-      playRetroSound("click");
       executeCommand(terminalInput);
       setTerminalInput("");
     };
@@ -462,7 +427,7 @@ export default function Home() {
             <div className="taskbar-right">
               <button
                 className={`crt-toggle-btn ${crtActive ? "active" : ""}`}
-                onClick={() => { playRetroSound("relay"); setCrtActive(!crtActive); }}
+                onClick={() => setCrtActive(!crtActive)}
                 title="Toggle CRT Screen Scanlines"
               >
                 {/* TV inline SVG */}
@@ -493,28 +458,19 @@ export default function Home() {
             {shortcuts.map((shortcut, idx) => {
               const Icon = shortcut.icon;
               return (
-                <Link key={idx} to={shortcut.hash} className="desktop-shortcut-link" onClick={() => playRetroSound("click")}>
+                <a key={idx} href={shortcut.hash} className="desktop-shortcut-link">
                   <div className="desktop-shortcut">
                     <div className="shortcut-icon-box" style={{ backgroundColor: shortcut.color, color: shortcut.iconColor }}>
                       <Icon size={20} strokeWidth={2.5} />
                     </div>
                     <span className="shortcut-label">{shortcut.label}</span>
                   </div>
-                </Link>
+                </a>
               );
             })}
 
-            {/* Interactive Window Launcher: notes.txt */}
-            <div className="desktop-shortcut" onClick={() => { playRetroSound("open"); setOpenWindows(prev => ({ ...prev, notes: true })); setActiveWindowId("notes"); }}>
-              <div className="shortcut-icon-box" style={{ backgroundColor: "var(--pastel-peach)", color: "var(--accent-orange)" }}>
-                {/* File/Doc outline */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-              </div>
-              <span className="shortcut-label">notes.txt</span>
-            </div>
-
-            {/* Interactive Window Launcher: avatar.png */}
-            <div className="desktop-shortcut" onClick={() => { playRetroSound("open"); setOpenWindows(prev => ({ ...prev, avatar: true })); setActiveWindowId("avatar"); }}>
+            {/* Interactive Modal Launcher: avatar.png */}
+            <div className="desktop-shortcut" onClick={() => setActiveModal("avatar")}>
               <div className="shortcut-icon-box" style={{ backgroundColor: "var(--pastel-purple)", color: "var(--accent-purple)" }}>
                 {/* User Avatar outline */}
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
@@ -522,22 +478,13 @@ export default function Home() {
               <span className="shortcut-label">avatar.png</span>
             </div>
 
-            {/* Interactive Window Launcher: synth.exe */}
-            <div className="desktop-shortcut" onClick={() => { playRetroSound("open"); setOpenWindows(prev => ({ ...prev, synth: true })); setActiveWindowId("synth"); }}>
+            {/* Interactive Modal Launcher: synth.exe */}
+            <div className="desktop-shortcut" onClick={() => setActiveModal("synth")}>
               <div className="shortcut-icon-box" style={{ backgroundColor: "var(--pastel-yellow)", color: "var(--accent-yellow)" }}>
                 {/* Audio/Synth outline */}
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
               </div>
               <span className="shortcut-label">synth.exe</span>
-            </div>
-
-            {/* Interactive Window Launcher: trash.exe */}
-            <div className="desktop-shortcut" onClick={() => { playRetroSound("open"); setOpenWindows(prev => ({ ...prev, trash: true })); setActiveWindowId("trash"); }}>
-              <div className="shortcut-icon-box" style={{ backgroundColor: "var(--pastel-rose)", color: "var(--accent-rose)" }}>
-                {/* Trash outline */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-              </div>
-              <span className="shortcut-label">trash.exe</span>
             </div>
           </div>
 
@@ -567,14 +514,14 @@ export default function Home() {
               <p className="hero-bio">{shortBio}</p>
 
               <div className="hero-buttons">
-                <Link to="/projects" className="btn btn-primary neo-btn" onClick={() => playRetroSound("click")}>
+                <a href="#/projects" className="btn btn-primary neo-btn">
                   <span>Execute Projects</span>
                   <ArrowRight size={18} strokeWidth={2.5} />
-                </Link>
-                <Link to="/certificates" className="btn btn-secondary neo-btn" onClick={() => playRetroSound("click")}>
+                </a>
+                <a href="#/certificates" className="btn btn-secondary neo-btn">
                   <span>Verify Credentials</span>
                   <Award size={18} strokeWidth={2.5} />
-                </Link>
+                </a>
               </div>
 
               <div className="terminal-shell-window">
@@ -600,16 +547,16 @@ export default function Home() {
                 </div>
 
                 <div className="terminal-macro-buttons">
-                  <button className="terminal-macro-btn" onClick={() => { playRetroSound("click"); executeCommand("cat welcome.txt"); }}>
+                  <button className="terminal-macro-btn" onClick={() => executeCommand("cat welcome.txt")}>
                     welcome.txt
                   </button>
-                  <button className="terminal-macro-btn" onClick={() => { playRetroSound("click"); executeCommand("cat system.cfg"); }}>
+                  <button className="terminal-macro-btn" onClick={() => executeCommand("cat system.cfg")}>
                     system.cfg
                   </button>
-                  <button className="terminal-macro-btn" onClick={() => { playRetroSound("click"); executeCommand("ping github.com"); }}>
+                  <button className="terminal-macro-btn" onClick={() => executeCommand("ping github.com")}>
                     ping github
                   </button>
-                  <button className="terminal-macro-btn" style={{ borderColor: "var(--accent-rose)", color: "var(--accent-rose)" }} onClick={() => { playRetroSound("close"); executeCommand("clear"); }}>
+                  <button className="terminal-macro-btn" style={{ borderColor: "var(--accent-rose)", color: "var(--accent-rose)" }} onClick={() => executeCommand("clear")}>
                     clear
                   </button>
                 </div>
@@ -690,386 +637,163 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-
-              {/* Live Telemetry Log Stream Widget */}
-              <div className="system-telemetry-log-stream" style={{ marginTop: "24px" }}>
-                <div className="section-header-small">
-                  <span className="led-indicator led-blink" style={{ backgroundColor: "#06b6d4", marginRight: "6px" }}></span>
-                  <span>Live System Telemetry Log Stream</span>
-                </div>
-                <div className="live-logs-panel">
-                  <div className="live-logs-scroll">
-                    {liveLogs.map((log, idx) => (
-                      <div key={idx} className="live-log-row" style={{ color: log.color || '#fff' }}>
-                        <span className="log-time">[{log.time}]</span>
-                        <span className="log-tag">[{log.tag}]</span>
-                        <span className="log-desc">{log.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Draggable simulation windows */}
-          {openWindows.avatar && (
-            <DraggableWindow
-              id="avatar"
-              title="view_avatar.exe"
-              defaultX={120}
-              defaultY={150}
-              activeWindowId={activeWindowId}
-              setActiveWindowId={setActiveWindowId}
-              onClose={() => { playRetroSound("close"); setOpenWindows(prev => ({ ...prev, avatar: false })); }}
-            >
-              <div className="rpg-avatar-wrapper">
-                <img
-                  src="/avatar.png"
-                  alt="Developer retro avatar"
-                  className="rpg-avatar-img"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "https://avatars.githubusercontent.com/u/98998671?v=4";
-                  }}
-                />
-                <div className="rpg-stats">
-                  <h3>CHARACTER BIO</h3>
-                  <div className="rpg-stat-row">
-                    <div className="rpg-stat-info">
-                      <span>STRENGTH (HTML/CSS)</span>
-                      <span>92/100</span>
-                    </div>
-                    <div className="rpg-progress-bg">
-                      <div className="rpg-progress-fill" style={{ width: "92%", backgroundColor: "var(--accent-rose)" }}></div>
-                    </div>
+          {/* Modal Overlay / Draggable simulation windows */}
+          {activeModal && (
+            <div className="floating-window-backdrop" onClick={() => setActiveModal(null)}>
+              <div className="floating-window" onClick={(e) => e.stopPropagation()}>
+                <div className="floating-window-header">
+                  <div className="floating-window-title">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                    <span>{activeModal === "avatar" ? "view_avatar.exe" : "synthesizer.exe"}</span>
                   </div>
-                  <div className="rpg-stat-row">
-                    <div className="rpg-stat-info">
-                      <span>DEXTERITY (JAVASCRIPT)</span>
-                      <span>85/100</span>
-                    </div>
-                    <div className="rpg-progress-bg">
-                      <div className="rpg-progress-fill" style={{ width: "85%", backgroundColor: "var(--accent-blue)" }}></div>
-                    </div>
-                  </div>
-                  <div className="rpg-stat-row">
-                    <div className="rpg-stat-info">
-                      <span>CHARISMA (UI DESIGN)</span>
-                      <span>90/100</span>
-                    </div>
-                    <div className="rpg-progress-bg">
-                      <div className="rpg-progress-fill" style={{ width: "90%", backgroundColor: "var(--accent-purple)" }}></div>
-                    </div>
-                  </div>
-                  <div className="rpg-stat-row">
-                    <div className="rpg-stat-info">
-                      <span>INTELLIGENCE (REACT 19)</span>
-                      <span>82/100</span>
-                    </div>
-                    <div className="rpg-progress-bg">
-                      <div className="rpg-progress-fill" style={{ width: "82%", backgroundColor: "var(--accent-green)" }}></div>
-                    </div>
-                  </div>
-                  <div className="rpg-special-trait">
-                    SPECIAL CLASS TRAIT: NEO-BRUTALIST ARCHITECT (+25 ATK ON SHARP CORNERS)
-                  </div>
-                </div>
-              </div>
-            </DraggableWindow>
-          )}
-
-          {openWindows.synth && (
-            <DraggableWindow
-              id="synth"
-              title="synthesizer.exe"
-              defaultX={200}
-              defaultY={220}
-              activeWindowId={activeWindowId}
-              setActiveWindowId={setActiveWindowId}
-              onClose={() => { playRetroSound("close"); setOpenWindows(prev => ({ ...prev, synth: false })); }}
-            >
-              <div className="synth-container">
-                <div className="synth-pads">
-                  <button className="synth-pad" style={{ backgroundColor: "var(--pastel-rose)" }} onClick={() => playSynthSound("laser")}>
-                    <span>[ LASER ]</span>
-                    <span className="synth-wave-type">Sawtooth</span>
-                  </button>
-                  <button className="synth-pad" style={{ backgroundColor: "var(--pastel-sky)" }} onClick={() => playSynthSound("blip")}>
-                    <span>[ BLIP ]</span>
-                    <span className="synth-wave-type">Sine</span>
-                  </button>
-                  <button className="synth-pad" style={{ backgroundColor: "var(--pastel-mint)" }} onClick={() => playSynthSound("powerup")}>
-                    <span>[ POWER UP ]</span>
-                    <span className="synth-wave-type">Triangle</span>
-                  </button>
-                  <button className="synth-pad" style={{ backgroundColor: "var(--pastel-yellow)" }} onClick={() => playSynthSound("success")}>
-                    <span>[ SUCCESS ]</span>
-                    <span className="synth-wave-type">Chord Triad</span>
+                  <button className="floating-window-btn" onClick={() => setActiveModal(null)}>
+                    {/* Close inline SVG */}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
                 </div>
 
-                <div className="synth-controls">
-                  <div className="synth-slider-group">
-                    <label>
-                      <span>BASE FREQUENCY</span>
-                      <span>{synthPitch} Hz</span>
-                    </label>
-                    <input
-                      type="range"
-                      min="150"
-                      max="1200"
-                      value={synthPitch}
-                      onChange={(e) => setSynthPitch(e.target.value)}
-                      className="synth-range-input"
-                    />
-                  </div>
-
-                  <div className="synth-slider-group">
-                    <label>
-                      <span>WAVEFORM TYPE</span>
-                      <span style={{ textTransform: "uppercase" }}>{synthWaveform}</span>
-                    </label>
-                    <select
-                      value={synthWaveform}
-                      onChange={(e) => setSynthWaveform(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "6px",
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "0.75rem",
-                        border: "var(--border-thin)",
-                        borderRadius: "4px",
-                        background: "#ffffff"
-                      }}
-                    >
-                      <option value="sine">Sine</option>
-                      <option value="square">Square</option>
-                      <option value="sawtooth">Sawtooth</option>
-                      <option value="triangle">Triangle</option>
-                    </select>
-                  </div>
-
-                  <button
-                    className="btn btn-primary neo-btn"
-                    onClick={() => playSynthSound("custom")}
-                    style={{ marginTop: "8px", width: "100%", padding: "10px" }}
-                  >
-                    Play Pitch Freq
-                  </button>
-                </div>
-
-                {/* CSS oscilloscope animation visualizer */}
-                <div className={`synth-oscilloscope ${synthOscActive ? "synth-osc-active" : ""}`}>
-                  {Array.from({ length: 16 }).map((_, i) => (
-                    <div key={i} className="osc-bar" />
-                  ))}
-                </div>
-              </div>
-            </DraggableWindow>
-          )}
-
-          {openWindows.notes && (
-            <DraggableWindow
-              id="notes"
-              title="notes.txt"
-              defaultX={80}
-              defaultY={180}
-              activeWindowId={activeWindowId}
-              setActiveWindowId={setActiveWindowId}
-              onClose={() => { playRetroSound("close"); setOpenWindows(prev => ({ ...prev, notes: false })); }}
-            >
-              <div className="notes-window-content" style={{ padding: "4px" }}>
-                <textarea 
-                  readOnly
-                  value={`System Note to Visitor:\n=======================\n\nWelcome to my retro homepage! Here are a few things you can do here:\n\n1. Double-click or tap the files above to launch interactive modules.\n2. Try toggling the CRT scanline screen filter at the top right.\n3. Type "help" in the interactive terminal to run diagnostic commands.\n4. Type "game" to boot RetroQuest, a text adventure game.\n5. Click on synth.exe and play some retro waveforms.\n\nEnjoy your stay!\n- Yashvardhan`}
-                  style={{
-                    width: '100%',
-                    height: '220px',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.78rem',
-                    border: 'none',
-                    outline: 'none',
-                    resize: 'none',
-                    background: 'transparent',
-                    lineHeight: 1.4,
-                    color: 'var(--text-primary)'
-                  }}
-                />
-              </div>
-            </DraggableWindow>
-          )}
-
-          {openWindows.trash && (
-            <DraggableWindow
-              id="trash"
-              title="trash.exe"
-              defaultX={250}
-              defaultY={100}
-              activeWindowId={activeWindowId}
-              setActiveWindowId={setActiveWindowId}
-              onClose={() => { playRetroSound("close"); setOpenWindows(prev => ({ ...prev, trash: false })); }}
-            >
-              <div className="trash-window-content" style={{ padding: "10px", textAlign: "center", fontFamily: "var(--font-mono)", fontSize: "0.78rem" }}>
-                {trashEmpty ? (
-                  <div style={{ color: "var(--text-muted)", padding: "20px 0" }}>
-                    <p>🗑️ Recycle Bin is empty.</p>
-                    <p style={{ fontSize: "0.7rem", marginTop: "8px" }}>Zero wasted bytes detected.</p>
-                  </div>
-                ) : (
-                  <div>
-                    <div style={{ textAlign: "left", marginBottom: "16px", background: "rgba(15, 23, 42, 0.03)", padding: "10px", border: "1px dashed rgba(15,23,42,0.15)", borderRadius: "4px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                        <span>📄 spaghetti_code.bkp</span>
-                        <span style={{ color: "var(--accent-rose)" }}>4.2 MB</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                        <span>📄 div_soup_final.html</span>
-                        <span style={{ color: "var(--accent-rose)" }}>1.1 MB</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <span>📄 compiler_warnings.log</span>
-                        <span style={{ color: "var(--accent-rose)" }}>18.4 MB</span>
+                <div className="floating-window-body">
+                  {activeModal === "avatar" && (
+                    <div className="rpg-avatar-wrapper">
+                      <img
+                        src="/avatar.png"
+                        alt="Developer retro avatar"
+                        className="rpg-avatar-img"
+                      />
+                      <div className="rpg-stats">
+                        <h3>CHARACTER BIO</h3>
+                        <div className="rpg-stat-row">
+                          <div className="rpg-stat-info">
+                            <span>STRENGTH (HTML/CSS)</span>
+                            <span>92/100</span>
+                          </div>
+                          <div className="rpg-progress-bg">
+                            <div className="rpg-progress-fill" style={{ width: "92%", backgroundColor: "var(--accent-rose)" }}></div>
+                          </div>
+                        </div>
+                        <div className="rpg-stat-row">
+                          <div className="rpg-stat-info">
+                            <span>DEXTERITY (JAVASCRIPT)</span>
+                            <span>85/100</span>
+                          </div>
+                          <div className="rpg-progress-bg">
+                            <div className="rpg-progress-fill" style={{ width: "85%", backgroundColor: "var(--accent-blue)" }}></div>
+                          </div>
+                        </div>
+                        <div className="rpg-stat-row">
+                          <div className="rpg-stat-info">
+                            <span>CHARISMA (UI DESIGN)</span>
+                            <span>90/100</span>
+                          </div>
+                          <div className="rpg-progress-bg">
+                            <div className="rpg-progress-fill" style={{ width: "90%", backgroundColor: "var(--accent-purple)" }}></div>
+                          </div>
+                        </div>
+                        <div className="rpg-stat-row">
+                          <div className="rpg-stat-info">
+                            <span>INTELLIGENCE (REACT 19)</span>
+                            <span>82/100</span>
+                          </div>
+                          <div className="rpg-progress-bg">
+                            <div className="rpg-progress-fill" style={{ width: "82%", backgroundColor: "var(--accent-green)" }}></div>
+                          </div>
+                        </div>
+                        <div className="rpg-special-trait">
+                          SPECIAL CLASS TRAIT: NEO-BRUTALIST ARCHITECT (+25 ATK ON SHARP CORNERS)
+                        </div>
                       </div>
                     </div>
-                    <p style={{ marginBottom: "12px", color: "var(--text-secondary)" }}>Total items: 3 (23.7 MB)</p>
-                    <button 
-                      className="btn btn-secondary neo-btn" 
-                      onClick={() => {
-                        playRetroSound("explode");
-                        setTrashEmpty(true);
-                        const now = new Date();
-                        const timeString = now.toLocaleTimeString("en-US", { hour12: false });
-                        setLiveLogs(prev => [
-                          ...prev,
-                          { time: timeString, tag: "SYS/TRASH", desc: "Recycle Bin purged: 23.7MB cleared", color: "#ef4444" }
-                        ].slice(-5));
-                      }}
-                      style={{ padding: "6px 12px", width: "100%" }}
-                    >
-                      Empty Recycle Bin
-                    </button>
-                  </div>
-                )}
+                  )}
+
+                  {activeModal === "synth" && (
+                    <div className="synth-container">
+                      <div className="synth-pads">
+                        <button className="synth-pad" style={{ backgroundColor: "var(--pastel-rose)" }} onClick={() => playSynthSound("laser")}>
+                          <span>[ LASER ]</span>
+                          <span className="synth-wave-type">Sawtooth</span>
+                        </button>
+                        <button className="synth-pad" style={{ backgroundColor: "var(--pastel-sky)" }} onClick={() => playSynthSound("blip")}>
+                          <span>[ BLIP ]</span>
+                          <span className="synth-wave-type">Sine</span>
+                        </button>
+                        <button className="synth-pad" style={{ backgroundColor: "var(--pastel-mint)" }} onClick={() => playSynthSound("powerup")}>
+                          <span>[ POWER UP ]</span>
+                          <span className="synth-wave-type">Triangle</span>
+                        </button>
+                        <button className="synth-pad" style={{ backgroundColor: "var(--pastel-yellow)" }} onClick={() => playSynthSound("success")}>
+                          <span>[ SUCCESS ]</span>
+                          <span className="synth-wave-type">Chord Triad</span>
+                        </button>
+                      </div>
+
+                      <div className="synth-controls">
+                        <div className="synth-slider-group">
+                          <label>
+                            <span>BASE FREQUENCY</span>
+                            <span>{synthPitch} Hz</span>
+                          </label>
+                          <input
+                            type="range"
+                            min="150"
+                            max="1200"
+                            value={synthPitch}
+                            onChange={(e) => setSynthPitch(e.target.value)}
+                            className="synth-range-input"
+                          />
+                        </div>
+
+                        <div className="synth-slider-group">
+                          <label>
+                            <span>WAVEFORM TYPE</span>
+                            <span style={{ textTransform: "uppercase" }}>{synthWaveform}</span>
+                          </label>
+                          <select
+                            value={synthWaveform}
+                            onChange={(e) => setSynthWaveform(e.target.value)}
+                            style={{
+                              width: "100%",
+                              padding: "6px",
+                              fontFamily: "var(--font-mono)",
+                              fontSize: "0.75rem",
+                              border: "var(--border-thin)",
+                              borderRadius: "4px",
+                              background: "#ffffff"
+                            }}
+                          >
+                            <option value="sine">Sine</option>
+                            <option value="square">Square</option>
+                            <option value="sawtooth">Sawtooth</option>
+                            <option value="triangle">Triangle</option>
+                          </select>
+                        </div>
+
+                        <button
+                          className="btn btn-primary neo-btn"
+                          onClick={() => playSynthSound("custom")}
+                          style={{ marginTop: "8px", width: "100%", padding: "10px" }}
+                        >
+                          Play Pitch Freq
+                        </button>
+                      </div>
+
+                      {/* CSS oscilloscope animation visualizer */}
+                      <div className={`synth-oscilloscope ${synthOscActive ? "synth-osc-active" : ""}`}>
+                        {Array.from({ length: 16 }).map((_, i) => (
+                          <div key={i} className="osc-bar" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </DraggableWindow>
+            </div>
           )}
 
         </div>
       </div>
     );
   }
-
-// Draggable Floating Window Component helper
-function DraggableWindow({ title, onClose, children, defaultX = 100, defaultY = 120, id, activeWindowId, setActiveWindowId }) {
-  const [pos, setPos] = useState({ x: defaultX, y: defaultY });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-  const windowRef = useRef(null);
-
-  const handleMouseDown = (e) => {
-    if (e.target.closest('.floating-window-btn') || e.target.closest('.synth-pad') || e.target.closest('input') || e.target.closest('select') || e.target.closest('button')) return;
-    setActiveWindowId(id);
-    setIsDragging(true);
-    dragStart.current = {
-      x: e.clientX - pos.x,
-      y: e.clientY - pos.y
-    };
-  };
-
-  const handleTouchStart = (e) => {
-    if (e.target.closest('.floating-window-btn') || e.target.closest('.synth-pad') || e.target.closest('input') || e.target.closest('select') || e.target.closest('button')) return;
-    setActiveWindowId(id);
-    setIsDragging(true);
-    const touch = e.touches[0];
-    dragStart.current = {
-      x: touch.clientX - pos.x,
-      y: touch.clientY - pos.y
-    };
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging) return;
-      let newX = e.clientX - dragStart.current.x;
-      let newY = e.clientY - dragStart.current.y;
-      
-      newX = Math.max(10, Math.min(window.innerWidth - 320, newX));
-      newY = Math.max(50, Math.min(window.innerHeight - 300, newY));
-
-      setPos({ x: newX, y: newY });
-    };
-
-    const handleTouchMove = (e) => {
-      if (!isDragging) return;
-      const touch = e.touches[0];
-      let newX = touch.clientX - dragStart.current.x;
-      let newY = touch.clientY - dragStart.current.y;
-      
-      newX = Math.max(10, Math.min(window.innerWidth - 320, newX));
-      newY = Math.max(50, Math.min(window.innerHeight - 300, newY));
-
-      setPos({ x: newX, y: newY });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      document.addEventListener('touchend', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleMouseUp);
-    };
-  }, [isDragging]);
-
-  const zIndex = activeWindowId === id ? 999 : 500;
-
-  return (
-    <div
-      ref={windowRef}
-      className={`floating-window ${activeWindowId === id ? 'active-focus' : ''}`}
-      style={{
-        position: 'fixed',
-        left: `${pos.x}px`,
-        top: `${pos.y}px`,
-        zIndex: zIndex,
-        margin: 0,
-      }}
-      onClick={() => setActiveWindowId(id)}
-    >
-      <div 
-        className="floating-window-header" 
-        onMouseDown={handleMouseDown} 
-        onTouchStart={handleTouchStart}
-        style={{ cursor: 'move' }}
-      >
-        <div className="floating-window-title">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-          <span>{title}</span>
-        </div>
-        <button 
-          className="floating-window-btn" 
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-      </div>
-      <div className="floating-window-body">
-        {children}
-      </div>
-    </div>
-  );
 }
-
