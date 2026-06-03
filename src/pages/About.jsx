@@ -1,18 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { User, Calendar, GraduationCap, Award, GitBranch, GitCommit } from "lucide-react";
 import { portfolioData } from "../data/portfolioData";
 import DossierWidget from "../components/pixelcanvas";
+
 export default function About() {
   const { detailedBio, educationStatus } = portfolioData.personalInfo;
-  const { skills, experience } = portfolioData;
+  const { experience } = portfolioData;
 
+  const [skillsList, setSkillsList] = useState(portfolioData.skills);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [expandedCommits, setExpandedCommits] = useState({});
 
   const categories = ["All", "Languages", "Frameworks & Libraries", "Tools & Workflows"];
 
   const filteredSkills = activeCategory === "All"
-    ? skills
-    : skills.filter(skill => skill.category === activeCategory);
+    ? skillsList
+    : skillsList.filter(skill => skill.category === activeCategory);
+
+  // Web Audio synth tone generator for skill faders
+  const playSynthTone = (pitch, duration = 0.1, type = "sine") => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(pitch, ctx.currentTime);
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch (e) {
+      // Ignore autoplay/audio restrictions
+    }
+  };
+
+  const handleCategoryChange = (cat) => {
+    playSynthTone(600, 0.03, "sine");
+    setActiveCategory(cat);
+  };
+
+  const handleCommitClick = (idx) => {
+    const clicks = [700, 750, 800];
+    const pitch = clicks[idx % clicks.length];
+    playSynthTone(pitch, 0.025, "sine");
+
+    setExpandedCommits(prev => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }));
+  };
+
+  const handleSkillLevelChange = (skillName, newLevel) => {
+    setSkillsList(prev => prev.map(s => s.name === skillName ? { ...s, level: Number(newLevel) } : s));
+  };
 
   // Helper to resolve pastel color for skill bars based on category
   const getSkillColorClass = (category) => {
@@ -25,6 +72,44 @@ export default function About() {
   const getCommitHash = (idx) => {
     const hashes = ["c27a4b8", "f8b19e2", "d39c0f4", "e48d1a3"];
     return hashes[idx % hashes.length];
+  };
+
+  const commitDiffs = {
+    0: [
+      { text: "- legacy_monolithic_structures", type: "minus" },
+      { text: "- unoptimized_manual_workflows", type: "minus" },
+      { text: "+ designed and compiled responsive client applications using React, flexible grids, and CSS variables.", type: "plus" },
+      { text: "+ engineered lightweight automated scripts to facilitate git pushes and environment setup.", type: "plus" },
+      { text: "+ integrated public APIs and designed custom client-side cache handlers using LocalStorage.", type: "plus" }
+    ],
+    1: [
+      { text: "- high_school_status = \"IN_PROGRESS\"", type: "minus" },
+      { text: "+ high_school_status = \"GRADUATED_CLASS_OF_2026\"", type: "plus" },
+      { text: "+ successfully finished standard curriculum focusing on analytical sciences and computer logic.", type: "plus" },
+      { text: "+ built standalone web projects as an extracurricular pursuit, mastering frontend design paradigms.", type: "plus" }
+    ]
+  };
+
+  const renderGitDiff = (idx) => {
+    const diffLines = commitDiffs[idx] || [];
+    const hash = getCommitHash(idx);
+    return (
+      <div className="git-diff-container" onClick={(e) => e.stopPropagation()}>
+        <div className="git-diff-header">
+          <div>diff --git a/experience/{idx === 0 ? "web_labs" : "school_studies"}.log b/experience/{idx === 0 ? "web_labs" : "school_studies"}.log</div>
+          <div>index {hash}..100644</div>
+          <div>--- a/experience/{idx === 0 ? "web_labs" : "school_studies"}.log</div>
+          <div>+++ b/experience/{idx === 0 ? "web_labs" : "school_studies"}.log</div>
+        </div>
+        <div className="git-diff-lines">
+          {diffLines.map((line, lIdx) => (
+            <div key={lIdx} className={`git-diff-line diff-${line.type}`}>
+              {line.text}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -131,9 +216,11 @@ export default function About() {
 
         {/* Technical Skills Block - Audio Synthesizer Slider Widgets */}
         <div className="skills-block neo-card card-purple">
-          <div className="section-header-small">
-            <Award size={16} strokeWidth={2.5} />
-            <span>Fader Panel (Skills)</span>
+          <div className="section-header-small" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Award size={16} strokeWidth={2.5} />
+              <span>Skills Fader Panel</span>
+            </div>
           </div>
 
           {/* Filter tabs */}
@@ -142,7 +229,7 @@ export default function About() {
               <button
                 key={cat}
                 className={`skill-tab-btn ${activeCategory === cat ? "active" : ""}`}
-                onClick={() => setActiveCategory(cat)}
+                onClick={() => handleCategoryChange(cat)}
               >
                 {cat.split(" ")[0]}
               </button>
@@ -151,37 +238,52 @@ export default function About() {
 
           {/* Synthesizer Sliders */}
           <div className="skills-list">
-            {filteredSkills.map((skill, index) => (
-              <div key={index} className="skill-item">
-                <div className="skill-info">
-                  <span className="skill-name">{skill.name}</span>
-                  <span className="skill-percentage">{skill.level}%</span>
-                </div>
-
-                {/* Synthesizer Audio Slider */}
-                <div className="synth-slider-container">
-                  <div className="synth-slider-ticks">
-                    <span>0</span>
-                    <span>|</span>
-                    <span>|</span>
-                    <span>|</span>
-                    <span>|</span>
-                    <span>100</span>
+            {filteredSkills.map((skill, index) => {
+              return (
+                <div key={index} className="skill-item">
+                  <div className="skill-info">
+                    <span className="skill-name">{skill.name}</span>
+                    <span className="skill-percentage">{skill.level}%</span>
                   </div>
 
-                  <div className="synth-slider-track">
-                    <div
-                      className={`synth-slider-fill ${getSkillColorClass(skill.category)}`}
-                      style={{ width: `${skill.level}%` }}
-                    ></div>
-                    <div
-                      className="synth-slider-knob"
-                      style={{ left: `${skill.level}%` }}
-                    ></div>
+                  {/* Synthesizer Audio Slider */}
+                  <div className="synth-slider-container">
+                    <div className="synth-slider-track">
+                      <div
+                        className={`synth-slider-fill ${getSkillColorClass(skill.category)}`}
+                        style={{ width: `${skill.level}%` }}
+                      ></div>
+                      <div
+                        className="synth-slider-knob"
+                        style={{ left: `${skill.level}%` }}
+                      ></div>
+
+                      {/* Invisible native range fader overlaid on top for native drag logic */}
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={skill.level}
+                        onChange={(e) => {
+                          handleSkillLevelChange(skill.name, e.target.value);
+                        }}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          opacity: 0,
+                          cursor: "pointer",
+                          zIndex: 10
+                        }}
+                        aria-label={`${skill.name} level fader`}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -203,13 +305,18 @@ export default function About() {
             const isEven = index % 2 === 0;
             const noteColorClass = isEven ? "card-rose" : "card-mint";
             const hash = getCommitHash(index);
+            const isExpanded = expandedCommits[index];
             return (
               <div key={index} className="git-commit-row">
                 {/* Git Node Circle */}
                 <div className="git-commit-node"></div>
 
                 {/* Commit Content Box */}
-                <div className={`git-commit-card neo-card ${noteColorClass}`}>
+                <div
+                  className={`git-commit-card neo-card ${noteColorClass} clickable-commit-card ${isExpanded ? "commit-card-expanded" : ""}`}
+                  onClick={() => handleCommitClick(index)}
+                  style={{ cursor: "pointer", transition: "all 0.2s ease" }}
+                >
                   <div className="git-commit-header">
                     <div className="git-commit-hash-wrapper">
                       <span className="git-commit-hash">commit {hash}</span>
@@ -220,17 +327,21 @@ export default function About() {
 
                   <div className="git-commit-meta-details">
                     <span>Author: <span className="git-commit-author">Yashvardhan &lt;developer@yashvardhan.dev&gt;</span></span>
-                    <span>Date: Tue Jun 02 15:15:01 2026 +0530</span>
+                    <span>Date: Wed 25 March 1:30:00 2026 +0530</span>
                   </div>
 
                   <h3 className="git-commit-title">{item.role}</h3>
                   <h4 className="git-commit-company">{item.company}</h4>
 
-                  <ul className="git-commit-message-list">
-                    {item.description.map((bullet, bIdx) => (
-                      <li key={bIdx}>{bullet}</li>
-                    ))}
-                  </ul>
+                  {isExpanded ? (
+                    renderGitDiff(index)
+                  ) : (
+                    <div className="git-diff-collapsed-indicator" style={{ marginTop: "12px", borderTop: "1.5px dashed rgba(15, 23, 42, 0.1)", paddingTop: "8px" }}>
+                      <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                        ⚡ click to inspect commit accomplishments (git diff) ...
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             );

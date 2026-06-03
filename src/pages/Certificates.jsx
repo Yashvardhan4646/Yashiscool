@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { portfolioData } from "../data/portfolioData";
 
 // Inline SVG icons to avoid lucide export issues
@@ -49,12 +49,31 @@ const CATEGORY_COLORS = {
 const getCatStyle = (cat) =>
   CATEGORY_COLORS[cat] || { bg: "var(--pastel-yellow)", accent: "var(--accent-yellow)", tag: "#d97706" };
 
+const getRarityInfo = (title) => {
+  const lowercaseTitle = title.toLowerCase();
+  if (lowercaseTitle.includes("seo with ai") || lowercaseTitle.includes("javascript intermediate")) {
+    return { name: "LEGENDARY", color: "#fbbf24", class: "rarity-legendary" };
+  }
+  if (lowercaseTitle.includes("python developer") || lowercaseTitle.includes("coding for data")) {
+    return { name: "EPIC", color: "#a855f7", class: "rarity-epic" };
+  }
+  if (lowercaseTitle.includes("sql") || lowercaseTitle.includes("python intermediate") || lowercaseTitle.includes("brainstorm")) {
+    return { name: "RARE", color: "#3b82f6", class: "rarity-rare" };
+  }
+  return { name: "UNCOMMON", color: "#10b981", class: "rarity-uncommon" };
+};
+
 export default function Certificates() {
   const { certificates } = portfolioData;
   const [selectedCert, setSelectedCert] = useState(null);
   const [copied, setCopied]             = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
   const [scanMode, setScanMode]         = useState(false);
+
+  // Decryption loader animation state in modal
+  const [decryptState, setDecryptState] = useState("idle"); // 'idle' | 'decrypting' | 'finished'
+  const [decryptProgress, setDecryptProgress] = useState(0);
+  const [hexLogs, setHexLogs] = useState([]);
 
   const categories = ["All", ...Array.from(new Set(certificates.map((c) => c.category)))];
 
@@ -63,16 +82,123 @@ export default function Certificates() {
       ? certificates
       : certificates.filter((c) => c.category === activeFilter);
 
+  // Web Audio Synth tone synthesizer
+  const playSynthTone = (pitch, duration = 0.1, type = "sine") => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(pitch, ctx.currentTime);
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch (e) {
+      // Fail silently
+    }
+  };
+
+  const handleCardHover = () => {
+    playSynthTone(1200, 0.015, "sine");
+  };
+
+  const triggerOpenChime = () => {
+    playSynthTone(587.33, 0.05, "sine");
+    setTimeout(() => playSynthTone(698.46, 0.05, "sine"), 50);
+    setTimeout(() => playSynthTone(880.00, 0.12, "sine"), 100);
+  };
+
+  const triggerCopyChime = () => {
+    playSynthTone(600, 0.05, "square");
+    setTimeout(() => playSynthTone(900, 0.05, "square"), 60);
+  };
+
+  const triggerScanToggleSound = () => {
+    playSynthTone(200, 0.08, "sawtooth");
+    setTimeout(() => playSynthTone(100, 0.12, "sawtooth"), 80);
+  };
+
+  // 3D Card Hover Perspective Math
+  const handleMouseMove = (e, cardEl) => {
+    if (!cardEl) return;
+    const rect = cardEl.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const normX = (x / rect.width) - 0.5;
+    const normY = (y / rect.height) - 0.5;
+
+    const tiltX = -normY * 16;
+    const tiltY = normX * 16;
+
+    cardEl.style.setProperty("--tilt-x", `${tiltX}deg`);
+    cardEl.style.setProperty("--tilt-y", `${tiltY}deg`);
+    cardEl.style.setProperty("--mouse-x", `${(x / rect.width) * 100}%`);
+    cardEl.style.setProperty("--mouse-y", `${(y / rect.height) * 100}%`);
+  };
+
+  const handleMouseLeave = (cardEl) => {
+    if (!cardEl) return;
+    cardEl.style.setProperty("--tilt-x", "0deg");
+    cardEl.style.setProperty("--tilt-y", "0deg");
+    cardEl.style.setProperty("--mouse-x", "50%");
+    cardEl.style.setProperty("--mouse-y", "50%");
+  };
+
   const handleCopy = (id) => {
     navigator.clipboard.writeText(id);
     setCopied(true);
+    triggerCopyChime();
     setTimeout(() => setCopied(false), 2000);
   };
 
   const openCert = (cert) => {
     setSelectedCert(cert);
     setCopied(false);
+    setDecryptState("decrypting");
+    triggerOpenChime();
   };
+
+  // Decryption Log ticker sequencer
+  useEffect(() => {
+    if (selectedCert && decryptState === "decrypting") {
+      setDecryptProgress(0);
+      setHexLogs(["CONNECTING TO VAULT...", "RETRIEVING ENCRYPTED KEY DATA..."]);
+      
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 20;
+        setDecryptProgress(progress);
+        
+        const randomHex = Array.from({ length: 4 }, () => Math.floor(Math.random() * 16).toString(16).toUpperCase()).join("");
+        setHexLogs(prev => [
+          ...prev,
+          `DECRYPT_BLOCK_[${randomHex}]: PARSING CERT_HASH_SEGMENT_${progress / 20}... [OK]`
+        ]);
+
+        if (progress >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setHexLogs(prev => [...prev, "VERIFICATION: SIGNATURE VERIFIED SUCCESSFULLY.", "OS PROTOCOL ACTIVE: RENDER COMPLETED."]);
+            setTimeout(() => {
+              setDecryptState("finished");
+              playSynthTone(987.77, 0.08, "sine"); // B5
+            }, 300);
+          }, 200);
+        }
+      }, 140);
+
+      return () => clearInterval(interval);
+    }
+  }, [selectedCert, decryptState]);
 
   return (
     <div className="page-fade-in cert-page">
@@ -94,7 +220,7 @@ export default function Certificates() {
         {/* Scan Mode Toggle */}
         <button
           className={`cert-scan-toggle ${scanMode ? "active" : ""}`}
-          onClick={() => setScanMode(!scanMode)}
+          onClick={() => { triggerScanToggleSound(); setScanMode(!scanMode); }}
           title="Toggle scan mode to preview certificate images"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -149,19 +275,39 @@ export default function Certificates() {
       <div className="cert-cards-grid">
         {filtered.map((cert, idx) => {
           const cs = getCatStyle(cert.category);
+          const rarity = getRarityInfo(cert.title);
           return (
             <div
               key={cert.id}
-              className="cert-trophy-card"
+              className={`cert-trophy-card ${rarity.class}`}
               onClick={() => openCert(cert)}
-              style={{ "--cert-accent": cs.accent, "--cert-bg": cs.bg, "--cert-tag": cs.tag }}
+              onMouseMove={(e) => handleMouseMove(e, e.currentTarget)}
+              onMouseLeave={(e) => handleMouseLeave(e, e.currentTarget)}
+              onMouseEnter={handleCardHover}
+              style={{
+                "--cert-accent": cs.accent,
+                "--cert-bg": cs.bg,
+                "--cert-tag": cs.tag,
+                transform: "perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))",
+                transition: "transform 0.1s ease, box-shadow 0.25s ease"
+              }}
             >
+              {/* Dynamic Holographic Shine Overlay */}
+              <div className="cert-holo-overlay"></div>
+
               {/* Holographic top-edge strip */}
               <div className="cert-holo-strip"></div>
 
-              {/* Category label */}
-              <div className="cert-category-pill" style={{ backgroundColor: cs.bg, color: cs.tag, borderColor: cs.tag }}>
-                {cert.category}
+              {/* Card Badge Header Row */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                {/* Category label */}
+                <div className="cert-category-pill" style={{ backgroundColor: cs.bg, color: cs.tag, borderColor: cs.tag }}>
+                  {cert.category}
+                </div>
+                {/* Rarity Tier tag */}
+                <div className="cert-rarity-badge" style={{ borderColor: rarity.color, color: rarity.color }}>
+                  {rarity.name}
+                </div>
               </div>
 
               {/* Medal icon */}
@@ -222,79 +368,107 @@ export default function Certificates() {
                 </button>
               </div>
 
-              <div className="cert-modal-inner">
-                {/* Left: big certificate image */}
-                <div className="cert-modal-img-pane" style={{ backgroundColor: cs.bg }}>
-                  {selectedCert.imageUrl ? (
-                    <img
-                      src={selectedCert.imageUrl}
-                      alt={selectedCert.title}
-                      className="cert-modal-img"
-                    />
-                  ) : (
-                    <div className="cert-modal-img-fallback" style={{ color: cs.tag }}>
-                      <IconShield />
-                      <span>No Image Available</span>
+              {decryptState !== "finished" ? (
+                <div className="cert-decrypt-console" style={{ padding: "28px", fontFamily: "var(--font-mono)", color: "#10b981", background: "#090d16", minHeight: "360px", display: "flex", flexDirection: "column", justifyContent: "space-between", borderRadius: "0 0 8px 8px" }}>
+                  <div className="decrypt-console-header" style={{ borderBottom: "1px dashed rgba(16, 185, 129, 0.3)", paddingBottom: "8px", marginBottom: "12px", display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
+                    <span>DECRYPTER_VAULT_OS v1.02</span>
+                    <span className="console-blink-led" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      <span className="led-indicator led-blink" style={{ backgroundColor: "#ef4444", width: "8px", height: "8px" }}></span>
+                      ENCRYPTED_VAULT
+                    </span>
+                  </div>
+                  <div className="decrypt-console-logs" style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.72rem", overflowY: "auto", maxHeight: "200px", textAlign: "left" }}>
+                    {hexLogs.map((log, lIdx) => (
+                      <div key={lIdx} className="decrypt-log-row" style={{ lineBreak: "anywhere" }}>
+                        <span style={{ color: "#38bdf8" }}>&gt;&gt;</span> {log}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="decrypt-console-footer" style={{ borderTop: "1px dashed rgba(16, 185, 129, 0.3)", paddingTop: "12px", marginTop: "12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", marginBottom: "6px" }}>
+                      <span>DECRYPTION PROGRESS:</span>
+                      <span>{decryptProgress}%</span>
                     </div>
-                  )}
-
-                  {/* Verification seal */}
-                  <div className="cert-modal-seal" style={{ borderColor: cs.tag, color: cs.tag }}>
-                    <span>✔ VERIFIED</span>
+                    <div style={{ width: "100%", height: "8px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid #10b981", borderRadius: "4px", overflow: "hidden" }}>
+                      <div style={{ width: `${decryptProgress}%`, height: "100%", background: "#10b981", transition: "width 0.1s ease" }}></div>
+                    </div>
                   </div>
                 </div>
+              ) : (
+                <div className="cert-modal-inner">
+                  {/* Left: big certificate image */}
+                  <div className="cert-modal-img-pane" style={{ backgroundColor: cs.bg }}>
+                    {selectedCert.imageUrl ? (
+                      <img
+                        src={selectedCert.imageUrl}
+                        alt={selectedCert.title}
+                        className="cert-modal-img"
+                      />
+                    ) : (
+                      <div className="cert-modal-img-fallback" style={{ color: cs.tag }}>
+                        <IconShield />
+                        <span>No Image Available</span>
+                      </div>
+                    )}
 
-                {/* Right: metadata panel */}
-                <div className="cert-modal-meta-pane">
-                  {/* Category badge */}
-                  <span className="cert-modal-cat-badge" style={{ backgroundColor: cs.bg, color: cs.tag, borderColor: cs.tag }}>
-                    {selectedCert.category}
-                  </span>
-
-                  <h2 className="cert-modal-course-title">{selectedCert.title}</h2>
-                  <p className="cert-modal-issuer">Accredited by <strong>{selectedCert.issuer}</strong> · {selectedCert.date}</p>
-
-                  {/* Credential ID block */}
-                  <div className="cert-modal-section">
-                    <p className="cert-modal-section-label">CREDENTIAL ID</p>
-                    <div className="cert-modal-id-row">
-                      <code className="cert-modal-id-code">{selectedCert.credentialId}</code>
-                      <button
-                        className="cert-modal-copy-btn"
-                        onClick={() => handleCopy(selectedCert.credentialId)}
-                        title="Copy to clipboard"
-                      >
-                        <IconCopy />
-                        <span>{copied ? "Copied!" : "Copy"}</span>
-                      </button>
+                    {/* Verification seal */}
+                    <div className="cert-modal-seal" style={{ borderColor: cs.tag, color: cs.tag }}>
+                      <span>✔ VERIFIED</span>
                     </div>
                   </div>
 
-                  {/* Skills block */}
-                  <div className="cert-modal-section">
-                    <p className="cert-modal-section-label">VALIDATED SKILLS</p>
-                    <div className="cert-modal-skills-wrap">
-                      {selectedCert.skillsValidated.map((s, i) => (
-                        <span key={i} className="cert-modal-skill-chip" style={{ backgroundColor: cs.bg, borderColor: cs.tag, color: cs.tag }}>
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Right: metadata panel */}
+                  <div className="cert-modal-meta-pane">
+                    {/* Category badge */}
+                    <span className="cert-modal-cat-badge" style={{ backgroundColor: cs.bg, color: cs.tag, borderColor: cs.tag }}>
+                      {selectedCert.category}
+                    </span>
 
-                  {/* CTA button */}
-                  <a
-                    href={selectedCert.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="cert-modal-verify-btn"
-                    style={{ backgroundColor: cs.tag }}
-                  >
-                    <span>Verify Live Credential</span>
-                    <IconExternalLink />
-                  </a>
+                    <h2 className="cert-modal-course-title">{selectedCert.title}</h2>
+                    <p className="cert-modal-issuer">Accredited by <strong>{selectedCert.issuer}</strong> · {selectedCert.date}</p>
+
+                    {/* Credential ID block */}
+                    <div className="cert-modal-section">
+                      <p className="cert-modal-section-label">CREDENTIAL ID</p>
+                      <div className="cert-modal-id-row">
+                        <code className="cert-modal-id-code">{selectedCert.credentialId}</code>
+                        <button
+                          className="cert-modal-copy-btn"
+                          onClick={() => handleCopy(selectedCert.credentialId)}
+                          title="Copy to clipboard"
+                        >
+                          <IconCopy />
+                          <span>{copied ? "Copied!" : "Copy"}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Skills block */}
+                    <div className="cert-modal-section">
+                      <p className="cert-modal-section-label">VALIDATED SKILLS</p>
+                      <div className="cert-modal-skills-wrap">
+                        {selectedCert.skillsValidated.map((s, i) => (
+                          <span key={i} className="cert-modal-skill-chip" style={{ backgroundColor: cs.bg, borderColor: cs.tag, color: cs.tag }}>
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* CTA button */}
+                    <a
+                      href={selectedCert.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="cert-modal-verify-btn"
+                      style={{ backgroundColor: cs.tag }}
+                    >
+                      <span>Verify Live Credential</span>
+                      <IconExternalLink />
+                    </a>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         );

@@ -1,8 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import CanvasBg from "./components/CanvasBg";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import LoadingScreen from "./components/LoadingScreen";
 
 // Pages
 import Home from "./pages/Home";
@@ -23,37 +24,55 @@ function ScrollToTop() {
 }
 
 function App() {
+  const [loading, setLoading] = useState(true);
+
+  // Prevent body scroll during initial bios loader sequence
+  useEffect(() => {
+    if (loading) {
+      document.body.classList.add("body-loading-lock");
+    } else {
+      document.body.classList.remove("body-loading-lock");
+    }
+    return () => {
+      document.body.classList.remove("body-loading-lock");
+    };
+  }, [loading]);
+
   return (
-    <Router>
-      <ScrollToTop />
+    <>
+      {loading && <LoadingScreen onComplete={() => setLoading(false)} />}
+      
+      <Router>
+        <ScrollToTop />
 
-      {/* Dynamic particles interactive background */}
-      <CanvasBg />
+        {/* Dynamic particles interactive background */}
+        <CanvasBg />
 
-      {/* ── PIXEL GAME EFFECT OVERLAYS ── */}
-      <div className="pixel-scanlines" aria-hidden="true" />
-      <div className="pixel-vignette" aria-hidden="true" />
+        {/* ── PIXEL GAME EFFECT OVERLAYS ── */}
+        <div className="pixel-scanlines" aria-hidden="true" />
+        <div className="pixel-vignette" aria-hidden="true" />
 
-      {/* Main site shell layout */}
-      <div className="app-container">
-        <Navbar />
+        {/* Main site shell layout */}
+        <div className="app-container">
+          <Navbar />
 
-        <main className="main-content">
-          <Routes>
-            <Route path="/home" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/certificates" element={<Certificates />} />
-            <Route path="/contact" element={<Contact />} />
+          <main className="main-content">
+            <Routes>
+              <Route path="/home" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/certificates" element={<Certificates />} />
+              <Route path="/contact" element={<Contact />} />
 
-            {/* Directs the root URL or any broken paths back to /home */}
-            <Route path="*" element={<Navigate to="/home" replace />} />
-          </Routes>
-        </main>
+              {/* Directs the root URL or any broken paths back to /home */}
+              <Route path="*" element={<Navigate to="/home" replace />} />
+            </Routes>
+          </main>
 
-        <Footer />
-      </div>
-    </Router>
+          <Footer />
+        </div>
+      </Router>
+    </>
   );
 }
 

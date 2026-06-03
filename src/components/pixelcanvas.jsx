@@ -3,11 +3,18 @@ import React, { useState, useEffect, useRef } from 'react';
 export default function DossierWidget() {
     const [activeTab, setActiveTab] = useState('draw'); // 'draw' or 'music'
 
-    // --- DRAWING BOARD STATE ---
+    // --- DRAWING BOARD STATE (OPTIMIZED WITH HTML5 CANVAS) ---
     const GRID_SIZE = 48;
     const [currentColor, setCurrentColor] = useState('#0f172a');
     const [isDrawing, setIsDrawing] = useState(false);
-    const [grid, setGrid] = useState(Array(GRID_SIZE * GRID_SIZE).fill('#ffffff'));
+    
+    // We keep a saved state of the grid to restore drawing when changing tabs
+    const [savedGrid, setSavedGrid] = useState(() => Array(GRID_SIZE * GRID_SIZE).fill('#ffffff'));
+    
+    // gridRef holds the real-time pixel data to avoid React state-induced re-renders while drawing
+    const gridRef = useRef([]);
+
+    const canvasRef = useRef(null);
 
     // --- REAL MUSIC PLAYER STATE ---
     const [isPlaying, setIsPlaying] = useState(false);
@@ -38,10 +45,20 @@ export default function DossierWidget() {
 
     // Global mouse up handler to make drawing feel natural if mouse leaves the screen
     useEffect(() => {
-        const handleMouseUp = () => setIsDrawing(false);
-        window.addEventListener('mouseup', handleMouseUp);
-        return () => window.removeEventListener('mouseup', handleMouseUp);
-    }, []);
+        const handleGlobalMouseUp = () => {
+            if (isDrawing) {
+                setIsDrawing(false);
+                // Save current drawing back to state to persist across tab changes
+                setSavedGrid([...gridRef.current]);
+            }
+        };
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+        window.addEventListener('touchend', handleGlobalMouseUp);
+        return () => {
+            window.removeEventListener('mouseup', handleGlobalMouseUp);
+            window.removeEventListener('touchend', handleGlobalMouseUp);
+        };
+    }, [isDrawing]);
 
     // Controls audio play/pause sync safely
     useEffect(() => {
@@ -54,6 +71,99 @@ export default function DossierWidget() {
             audioRef.current.pause();
         }
     }, [isPlaying, currentTrackIndex]);
+
+    // Draw gridRef contents onto the HTML5 Canvas
+    const redrawCanvas = () => {
+        if (!canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        
+        const cellWidth = canvas.width / GRID_SIZE;
+        const cellHeight = canvas.height / GRID_SIZE;
+
+        // Clear canvas
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw each colored cell
+        for (let row = 0; row < GRID_SIZE; row++) {
+            for (let col = 0; col < GRID_SIZE; col++) {
+                const color = gridRef.current[row * GRID_SIZE + col];
+                if (color !== '#ffffff') {
+                    ctx.fillStyle = color;
+                    ctx.fillRect(col * cellWidth, row * cellHeight, cellWidth, cellHeight);
+                }
+            }
+        }
+    };
+
+    // Redraw whenever the tab is changed back to 'draw' or savedGrid updates
+    useEffect(() => {
+        if (activeTab === 'draw') {
+            // Restore from state
+            gridRef.current = [...savedGrid];
+            // Render on next frame when DOM has mounted the canvas
+            requestAnimationFrame(redrawCanvas);
+        }
+    }, [activeTab, savedGrid]);
+
+    // Pixel drawing action mapping coordinates to grid cells
+    const drawPixel = (clientX, clientY) => {
+        if (!canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+
+        // Calculate normalized coordinates (0.0 to 1.0)
+        const x = (clientX - rect.left) / rect.width;
+        const y = (clientY - rect.top) / rect.height;
+
+        // Convert to cell column and row indices
+        const col = Math.floor(x * GRID_SIZE);
+        const row = Math.floor(y * GRID_SIZE);
+
+        if (col >= 0 && col < GRID_SIZE && row >= 0 && row < GRID_SIZE) {
+            const index = row * GRID_SIZE + col;
+            
+            // Only update and redraw if color actually changes to prevent overhead
+            if (gridRef.current[index] !== currentColor) {
+                gridRef.current[index] = currentColor;
+
+                // Draw cell directly to canvas (immediate GPU render)
+                const ctx = canvas.getContext('2d');
+                const cellWidth = canvas.width / GRID_SIZE;
+                const cellHeight = canvas.height / GRID_SIZE;
+                ctx.fillStyle = currentColor;
+                ctx.fillRect(col * cellWidth, row * cellHeight, cellWidth, cellHeight);
+            }
+        }
+    };
+
+    // Mouse and Touch events
+    const handleCanvasMouseDown = (e) => {
+        e.preventDefault();
+        setIsDrawing(true);
+        drawPixel(e.clientX, e.clientY);
+    };
+
+    const handleCanvasMouseMove = (e) => {
+        if (isDrawing) {
+            drawPixel(e.clientX, e.clientY);
+        }
+    };
+
+    const handleCanvasTouchStart = (e) => {
+        e.preventDefault();
+        setIsDrawing(true);
+        const touch = e.touches[0];
+        drawPixel(touch.clientX, touch.clientY);
+    };
+
+    const handleCanvasTouchMove = (e) => {
+        if (isDrawing) {
+            const touch = e.touches[0];
+            drawPixel(touch.clientX, touch.clientY);
+        }
+    };
 
     // Audio lifecycle bindings
     const handleTimeUpdate = () => {
@@ -96,17 +206,21 @@ export default function DossierWidget() {
         return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     };
 
-    // Canvas Actions
-    const handlePixelAction = (index) => {
-        const newGrid = [...grid];
-        newGrid[index] = currentColor;
-        setGrid(newGrid);
+    // Actions
+    const handleClear = () => {
+        const cleared = Array(GRID_SIZE * GRID_SIZE).fill('#ffffff');
+        gridRef.current = cleared;
+        setSavedGrid(cleared);
+        if (canvasRef.current) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
     };
 
-    const handleMouseDown = (index, e) => {
-        e.preventDefault();
-        setIsDrawing(true);
-        handlePixelAction(index);
+    const handleEraser = () => {
+        setCurrentColor('#ffffff');
     };
 
     const tabStyle = {
@@ -232,31 +346,41 @@ export default function DossierWidget() {
                             </div>
                             <span style={{ flexGrow: 1 }} />
                             <button
-                                onClick={() => setCurrentColor('#ffffff')}
+                                onClick={handleEraser}
                                 style={{ ...btnStyle, background: currentColor === '#ffffff' ? '#e2e8f0' : '#fff' }}
                             >
                                 Eraser
                             </button>
-                            <button onClick={() => setGrid(Array(GRID_SIZE * GRID_SIZE).fill('#ffffff'))} style={btnStyle}>
+                            <button onClick={handleClear} style={btnStyle}>
                                 Clear
                             </button>
                         </div>
 
                         <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
                             flexGrow: 1,
-                            cursor: 'crosshair',
-                            background: '#fff'
+                            position: 'relative',
+                            background: '#fff',
+                            display: 'flex',
+                            alignItems: 'stretch',
+                            justifyContent: 'stretch',
+                            overflow: 'hidden'
                         }}>
-                            {grid.map((color, index) => (
-                                <div
-                                    key={index}
-                                    onMouseDown={(e) => handleMouseDown(index, e)}
-                                    onMouseEnter={() => { if (isDrawing) handlePixelAction(index); }}
-                                    style={{ backgroundColor: color, boxSizing: 'border-box' }}
-                                />
-                            ))}
+                            <canvas
+                                ref={canvasRef}
+                                width={480}
+                                height={480}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    display: 'block',
+                                    cursor: 'crosshair',
+                                    imageRendering: 'pixelated'
+                                }}
+                                onMouseDown={handleCanvasMouseDown}
+                                onMouseMove={handleCanvasMouseMove}
+                                onTouchStart={handleCanvasTouchStart}
+                                onTouchMove={handleCanvasTouchMove}
+                            />
                         </div>
                     </div>
                 )}
@@ -332,7 +456,7 @@ export default function DossierWidget() {
                                 <span>{formatTime(duration)}</span>
                             </div>
                             {/* Controls */}
-                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'center', marginTop: '8px' }}>
                                 <button onClick={handlePrevTrack} style={mediaBtnStyle}>
                                     ⏮
                                 </button>
@@ -371,6 +495,3 @@ export default function DossierWidget() {
         </div>
     );
 }
-
-
-
