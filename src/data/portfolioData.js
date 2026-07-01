@@ -50,6 +50,18 @@ export const portfolioData = {
 
   projects: [
     {
+      id: "pyrants",
+      title: "Pyrants Python Learning Hub",
+      description: "A visual Python learning hub and secure coding sandbox designed for students, parents, and teachers to master programming concepts step-by-step through interactive pathways.",
+      tech: ["React", "Vite", "CSS3 Variables", "Monaco Editor"],
+      category: "Full Stack",
+      github: "https://github.com/Yashvardhan4646/pyrants",
+      live: "https://pyrants.vercel.app",
+      size: "2.4 MB",
+      status: "stable",
+      extension: ".jsx"
+    },
+    {
       id: "weboon",
       title: "WeBoon Collaborative App Platform",
       description: "A collaborative platform where non-coders share ideas or app wishes, and coders pick those ideas to build working web/mobile apps, bridging the gap between imagination and execution.",
