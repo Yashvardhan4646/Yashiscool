@@ -234,8 +234,8 @@ body {
   max-width: 1140px;
   height: 56px;
   background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border: 1.5px solid #0f172a;
   border-radius: 0px;
   display: flex;
@@ -2431,6 +2431,7 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.6);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -2736,8 +2737,8 @@ body {
   width: 100vw;
   height: 100vh;
   background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2886,8 +2887,8 @@ body {
   width: 100vw;
   height: 100vh;
   background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4249,6 +4250,58 @@ body {
   background-color: var(--pastel-yellow);
 }
 
+/* Footer Webring */
+.footer-webring {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.footer-webring a[aria-label="vibering webring"] {
+  display: inline-block;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 2px 2px 0px #0f172a;
+  line-height: 0;
+  border-radius: 4px;
+}
+
+.footer-webring a[aria-label="vibering webring"]:hover {
+  transform: scale(1.05) rotate(-2deg);
+  box-shadow: 3px 3px 0px #0f172a;
+}
+
+.footer-webring-nav {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: right;
+  margin: 0;
+}
+
+.footer-webring-nav a {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 700;
+  transition: color 0.15s ease;
+}
+
+.footer-webring-nav a:hover {
+  color: var(--accent-purple);
+  text-decoration: underline;
+}
+
+@media (max-width: 992px) {
+  .footer-webring {
+    align-items: center;
+    margin-top: 8px;
+  }
+
+  .footer-webring-nav {
+    text-align: center;
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 992px) {
   .grid-2-col {
@@ -4565,6 +4618,7 @@ body {
   width: 100vw;
   height: 100vh;
   background-color: rgba(15, 23, 42, 0.4);
+  -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
   z-index: 1000;
   display: flex;
@@ -5854,6 +5908,7 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   background: rgba(15, 23, 42, 0.88);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   z-index: 10;
   text-align: center;
@@ -5993,8 +6048,8 @@ select:focus-visible {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
   align-items: center;
