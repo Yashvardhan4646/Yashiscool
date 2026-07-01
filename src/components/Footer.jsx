@@ -62,20 +62,14 @@ export default function Footer() {
 
         {/* vibering webring */}
         <div className="footer-webring">
-          <a
-            href="https://arshnah.github.io/vibering/"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="vibering webring"
-          >
-            <img src="https://arshnah.github.io/vibering/badge-light.svg" width={88} height={31} alt="vibering webring badge" />
-          </a>
+         <a href="https://larpring.github.io/" target="_blank" rel="noopener noreferrer" aria-label="larpring webring">
+  <img src="https://larpring.github.io/badge-light.svg" width={88} height={31} alt="larpring webring badge" />
+</a>
           <p className="footer-webring-nav">
-            member of the{" "}
-            <a href="https://arshnah.github.io/vibering/" target="_blank" rel="noopener noreferrer">vibering webring</a>:{" "}
-            <a href="https://arshnah.github.io/vibering/go.html?from=yash&dir=prev">&laquo; prev</a> |{" "}
-            <a href="https://arshnah.github.io/vibering/random/">random</a> |{" "}
-            <a href="https://arshnah.github.io/vibering/go.html?from=yash&dir=next">next &raquo;</a>
+            member of the <a href="https://larpring.github.io/" target="_blank" rel="noopener noreferrer">larpring webring</a>:{" "}
+            <a href="https://larpring.github.io/go.html?from=yash&dir=prev">&laquo; prev</a> |{" "}
+  <a href="https://larpring.github.io/random/">random</a> |{" "}
+  <a href="https://larpring.github.io/go.html?from=yash&dir=next">next &raquo;</a>
           </p>
         </div>
       </div>
