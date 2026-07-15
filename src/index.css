@@ -80,6 +80,7 @@ body {
   overflow: hidden;
   background: #ffffff;
   pointer-events: none;
+  contain: strict;
 }
 
 .blob {
@@ -2179,6 +2180,7 @@ body {
   overflow: hidden;
   transform-style: preserve-3d;
   transition: transform 0.1s ease, box-shadow 0.25s ease;
+  will-change: transform;
 }
 
 .cert-holo-overlay {
@@ -4928,6 +4930,7 @@ body {
 
 .synth-range-input {
   -webkit-appearance: none;
+  appearance: none;
   width: 100%;
   height: 8px;
   border: var(--border-thin);
@@ -5894,6 +5897,7 @@ select:focus-visible {
     transform: scale(0.85);
     opacity: 0.85;
   }
+
   100% {
     transform: scale(1.05);
     opacity: 1;
@@ -6101,14 +6105,31 @@ select:focus-visible {
 
 /* Screen Shake Effect during stamp slam */
 .envelope-wrapper.shake-effect {
-  animation: envelope-shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+  animation: envelope-shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
 }
 
 @keyframes envelope-shake {
-  10%, 90% { transform: translate3d(-3px, 0, 0); }
-  20%, 80% { transform: translate3d(5px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-7px, 0, 0); }
-  40%, 60% { transform: translate3d(7px, 0, 0); }
+
+  10%,
+  90% {
+    transform: translate3d(-3px, 0, 0);
+  }
+
+  20%,
+  80% {
+    transform: translate3d(5px, 0, 0);
+  }
+
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-7px, 0, 0);
+  }
+
+  40%,
+  60% {
+    transform: translate3d(7px, 0, 0);
+  }
 }
 
 /* Envelope Flight Animation */
@@ -6120,9 +6141,11 @@ select:focus-visible {
   0% {
     transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
   }
+
   20% {
     transform: translate3d(-20px, 40px, 0) scale(1.02) rotate(-3deg);
   }
+
   100% {
     transform: translate3d(600px, -450px, 0) scale(0.15) rotate(25deg);
     opacity: 0;
@@ -6283,4 +6306,53 @@ select:focus-visible {
   fill: none;
   stroke: rgba(225, 29, 72, 0.75);
   stroke-width: 1.5;
+}
+
+/* ──────────────────────────────────────────────────────────
+   UI/UX POLISHING & PERFORMANCE TUNING ADDITIONS
+   ────────────────────────────────────────────────────────── */
+
+/* GPU-Accelerated Page entry fade-in */
+.page-fade-in {
+  animation: page-fade-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
+@keyframes page-fade-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Interactive Manila Folders Lift Effect */
+.folder-card-wrapper {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.folder-card-wrapper:hover {
+  transform: translateY(-4px);
+}
+
+.folder-card-wrapper:hover .folder-card {
+  box-shadow: var(--shadow-brutal-large) !important;
+}
+
+/* Interactive Desktop Shortcuts Hover for Modal Launchers */
+.desktop-shortcut {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.desktop-shortcut:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 5px 5px 0px #0f172a !important;
+}
+
+.desktop-shortcut:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #0f172a !important;
 }

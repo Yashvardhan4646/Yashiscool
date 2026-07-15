@@ -134,6 +134,7 @@ export default function About() {
                 src="/avatar.png"
                 alt="Yashvardhan Portrait"
                 className="dossier-avatar-img"
+                loading="lazy"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = "https://avatars.githubusercontent.com/u/98998671?v=4"; // Fallback to GitHub avatar

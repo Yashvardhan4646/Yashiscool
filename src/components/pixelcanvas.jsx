@@ -23,6 +23,7 @@ export default function DossierWidget() {
     const [duration, setDuration] = useState(0);
 
     const audioRef = useRef(null);
+    const [volume, setVolume] = useState(0.7);
 
     // 🔴 UPDATE THESE PATHS TO POINT TO YOUR ACTUAL MP3 FILES IN YOUR public/ FOLDER
     const playlist = [
@@ -71,6 +72,13 @@ export default function DossierWidget() {
             audioRef.current.pause();
         }
     }, [isPlaying, currentTrackIndex]);
+
+    // Sync volume level
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.volume = volume;
+        }
+    }, [volume]);
 
     // Draw gridRef contents onto the HTML5 Canvas
     const redrawCanvas = () => {
@@ -160,6 +168,7 @@ export default function DossierWidget() {
 
     const handleCanvasTouchMove = (e) => {
         if (isDrawing) {
+            if (e.cancelable) e.preventDefault();
             const touch = e.touches[0];
             drawPixel(touch.clientX, touch.clientY);
         }
@@ -221,6 +230,14 @@ export default function DossierWidget() {
 
     const handleEraser = () => {
         setCurrentColor('#ffffff');
+    };
+
+    const handleDownload = () => {
+        if (!canvasRef.current) return;
+        const link = document.createElement('a');
+        link.download = 'pixel-art.png';
+        link.href = canvasRef.current.toDataURL();
+        link.click();
     };
 
     const tabStyle = {
@@ -354,6 +371,12 @@ export default function DossierWidget() {
                             <button onClick={handleClear} style={btnStyle}>
                                 Clear
                             </button>
+                            <button
+                                onClick={handleDownload}
+                                style={{ ...btnStyle, background: '#10b981', color: '#fff', borderColor: '#047857' }}
+                            >
+                                Save Art
+                            </button>
                         </div>
 
                         <div style={{
@@ -479,6 +502,30 @@ export default function DossierWidget() {
                                 <button onClick={handleNextTrack} style={mediaBtnStyle}>
                                     ⏭
                                 </button>
+                            </div>
+
+                            {/* Volume control */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginTop: '12px', width: '100%' }}>
+                                <span style={{ fontSize: '11px', opacity: 0.6 }}>🔊</span>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                    value={volume}
+                                    onChange={(e) => setVolume(Number(e.target.value))}
+                                    style={{
+                                        flexGrow: 1,
+                                        accentColor: '#0f172a',
+                                        cursor: 'pointer',
+                                        height: '4px',
+                                        margin: 0
+                                    }}
+                                    aria-label="Volume control"
+                                />
+                                <span style={{ fontSize: '9px', fontFamily: 'monospace', width: '28px', opacity: 0.6, textAlign: 'right' }}>
+                                    {Math.round(volume * 100)}%
+                                </span>
                             </div>
 
                             {/* Inject safe scoped keyframes */}

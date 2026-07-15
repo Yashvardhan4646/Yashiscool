@@ -319,7 +319,7 @@ export default function Certificates() {
               {/* Scan mode: show image thumbnail */}
               {scanMode && cert.imageUrl && (
                 <div className="cert-scan-preview">
-                  <img src={cert.imageUrl} alt={cert.title} />
+                  <img src={cert.imageUrl} alt={cert.title} loading="lazy" />
                 </div>
               )}
 
@@ -403,6 +403,7 @@ export default function Certificates() {
                         src={selectedCert.imageUrl}
                         alt={selectedCert.title}
                         className="cert-modal-img"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="cert-modal-img-fallback" style={{ color: cs.tag }}>

@@ -182,6 +182,7 @@ export default function Home() {
           "  skills        - Output developer capability analysis",
           "  game          - Play the interactive text adventure game",
           "  matrix        - Execute matrix binary code synchronization",
+          "  synth         - Launch retro synthesizer dashboard",
           "  clear         - Clear console screen buffer"
         ];
       } else if (normalizedCmd === "game") {
@@ -203,6 +204,13 @@ export default function Home() {
           "MATRIX RECONSTRUCTION COMPLETED SUCCESSFULLY."
         ];
         setTimeout(() => playClickSound(880, 0.3, "sine"), 100);
+      } else if (normalizedCmd === "synth" || normalizedCmd === "synthesizer") {
+        setActiveModal("synth");
+        outputLines = [
+          "INITIALIZING AUDIO CHANNELS...",
+          "MOUNTING RETRO SYNTHESIS ENGINE...",
+          "dashboard launcher: synth.exe started successfully."
+        ];
       } else if (normalizedCmd === "ls") {
         outputLines = [
           "Directory: /var/yashvardhan/root",
@@ -480,7 +488,13 @@ export default function Home() {
             <span className="shortcut-label">avatar.png</span>
           </div>
 
-
+          {/* Interactive Modal Launcher: synth.exe */}
+          <div className="desktop-shortcut" onClick={() => setActiveModal("synth")}>
+            <div className="shortcut-icon-box" style={{ backgroundColor: "var(--pastel-peach)", color: "var(--accent-yellow)" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="2" y1="14" x2="6" y2="14"></line><line x1="10" y1="8" x2="14" y2="8"></line><line x1="18" y1="16" x2="22" y2="16"></line></svg>
+            </div>
+            <span className="shortcut-label">synth.exe</span>
+          </div>
 
           {/* Interactive Modal Launcher: snake.exe */}
           <div className="desktop-shortcut" onClick={() => setActiveModal("snake")}>
